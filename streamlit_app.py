@@ -102,16 +102,12 @@ st.header("Transactions")
 st.write(f"Total entries: **{len(st.session_state.df)}**")
 
 st.info(
-    "Edit cells by double-clicking. Check **Delete** for rows you want to remove; they are removed when the app updates.",
+    "Edit cells by double-clicking. Use the section below to delete a transaction.",
     icon="✍️",
 )
 
-# Add a temporary "Delete" checkbox column (not stored in real data)
-display_df = st.session_state.df.copy()
-display_df["Delete"] = False
-
 edited_df = st.data_editor(
-    display_df,
+    st.session_state.df,
     use_container_width=True,
     hide_index=True,
     column_config={
@@ -128,17 +124,32 @@ edited_df = st.data_editor(
             options=["Expense", "Income"],
             required=True,
         ),
-        "Delete": st.column_config.CheckboxColumn("Delete", help="Check to delete this transaction", default=False),
     },
     disabled=[],
 )
+st.session_state.df = edited_df
 
-# Remove rows marked for deletion, then drop the Delete column and save
-if "Delete" in edited_df.columns:
-    keep_df = edited_df[~edited_df["Delete"].fillna(False)].drop(columns=["Delete"])
-    st.session_state.df = keep_df
+# ——— Delete a transaction (button, not checkbox) ———
+st.subheader("Delete a transaction")
+df = st.session_state.df
+if len(df) > 0:
+    def format_transaction(i):
+        row = df.iloc[i]
+        desc = str(row["Description"])[:40] if pd.notna(row["Description"]) else ""
+        return f"{row['Date']} | {row['Category']} | {desc} | ${row['Amount']:,.2f}"
+
+    delete_index = st.selectbox(
+        "Select transaction to delete",
+        options=range(len(df)),
+        format_func=format_transaction,
+        key="delete_select",
+    )
+    if st.button("Delete", type="primary"):
+        st.session_state.df = df.drop(df.index[delete_index]).reset_index(drop=True)
+        st.success("Transaction deleted.")
+        st.rerun()
 else:
-    st.session_state.df = edited_df
+    st.caption("No transactions to delete.")
 
 # ——— Statistics ———
 st.header("Statistics")
