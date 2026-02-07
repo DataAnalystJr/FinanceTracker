@@ -18,8 +18,8 @@ DEFAULT_EXPENSE_CATEGORIES = [
     "Utilities",
 ]
 DEFAULT_INCOME_CATEGORIES = [
-    "Income (Salary)",
-    "Income (Other)",
+    "Salary",
+    "Other",
 ]
 
 # Page config and title
@@ -66,15 +66,17 @@ with st.expander("Add a new expense or income category (e.g. Electric Bills, Gym
 # ——— Add a transaction ———
 st.header("Add a transaction")
 
+# Type and Category outside the form so changing Type updates Category options (form doesn't rerun until submit)
+trans_type = st.radio("Type", ["Expense", "Income"], horizontal=True)
+trans_category = st.selectbox(
+    "Category",
+    options=expense_categories if trans_type == "Expense" else income_categories,
+    key="add_trans_category",
+)
+
 with st.form("add_transaction_form"):
     trans_date = st.date_input("Date", value=datetime.date.today())
-    trans_type = st.radio("Type", ["Expense", "Income"], horizontal=True)
-    # Show only expense or income categories depending on type
-    trans_category = st.selectbox(
-        "Category",
-        options=expense_categories if trans_type == "Expense" else income_categories,
-    )
-    trans_description = st.text_input("Description", placeholder="e.g. Monthly electric bill")
+    trans_description = st.text_input("Description", placeholder="e.g. Monthly electric bill" if trans_type == "Expense" else "e.g. Monthly salary")
     trans_amount = st.number_input("Amount", min_value=0.0, step=0.01, format="%.2f")
     submitted = st.form_submit_button("Add transaction")
 
@@ -100,12 +102,16 @@ st.header("Transactions")
 st.write(f"Total entries: **{len(st.session_state.df)}**")
 
 st.info(
-    "Edit cells by double-clicking. Category must be one of your saved categories. Amount: negative = expense, positive = income.",
+    "Edit cells by double-clicking. Check **Delete** for rows you want to remove; they are removed when the app updates.",
     icon="✍️",
 )
 
+# Add a temporary "Delete" checkbox column (not stored in real data)
+display_df = st.session_state.df.copy()
+display_df["Delete"] = False
+
 edited_df = st.data_editor(
-    st.session_state.df,
+    display_df,
     use_container_width=True,
     hide_index=True,
     column_config={
@@ -122,12 +128,17 @@ edited_df = st.data_editor(
             options=["Expense", "Income"],
             required=True,
         ),
+        "Delete": st.column_config.CheckboxColumn("Delete", help="Check to delete this transaction", default=False),
     },
     disabled=[],
 )
 
-# Persist edits back to session state
-st.session_state.df = edited_df
+# Remove rows marked for deletion, then drop the Delete column and save
+if "Delete" in edited_df.columns:
+    keep_df = edited_df[~edited_df["Delete"].fillna(False)].drop(columns=["Delete"])
+    st.session_state.df = keep_df
+else:
+    st.session_state.df = edited_df
 
 # ——— Statistics ———
 st.header("Statistics")
