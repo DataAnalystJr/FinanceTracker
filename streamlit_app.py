@@ -6,167 +6,172 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-# Show app title and description.
-st.set_page_config(page_title="Support tickets", page_icon="🎫")
-st.title("🎫 Support tickets")
+# Default expense/income categories — user can add more
+DEFAULT_CATEGORIES = [
+    "Electric Bills",
+    "Groceries",
+    "Rent / Mortgage",
+    "Transport",
+    "Entertainment",
+    "Dining Out",
+    "Subscriptions",
+    "Healthcare",
+    "Shopping",
+    "Utilities",
+    "Income (Salary)",
+    "Income (Other)",
+]
+
+# Page config and title
+st.set_page_config(page_title="Personal Finance Tracker", page_icon="💰")
+st.title("💰 Personal Finance Tracker")
 st.write(
-    """
-    This app shows how you can build an internal tool in Streamlit. Here, we are 
-    implementing a support ticket workflow. The user can create a ticket, edit 
-    existing tickets, and view some statistics.
-    """
+    "Track your income and expenses by category. Add new categories (e.g. Electric Bills, Rent) and log transactions below."
 )
 
-# Create a random Pandas dataframe with existing tickets.
+# Initialize session state: transactions dataframe and custom categories
 if "df" not in st.session_state:
-
-    # Set seed for reproducibility.
     np.random.seed(42)
-
-    # Make up some fake issue descriptions.
-    issue_descriptions = [
-        "Network connectivity issues in the office",
-        "Software application crashing on startup",
-        "Printer not responding to print commands",
-        "Email server downtime",
-        "Data backup failure",
-        "Login authentication problems",
-        "Website performance degradation",
-        "Security vulnerability identified",
-        "Hardware malfunction in the server room",
-        "Employee unable to access shared files",
-        "Database connection failure",
-        "Mobile application not syncing data",
-        "VoIP phone system issues",
-        "VPN connection problems for remote employees",
-        "System updates causing compatibility issues",
-        "File server running out of storage space",
-        "Intrusion detection system alerts",
-        "Inventory management system errors",
-        "Customer data not loading in CRM",
-        "Collaboration tool not sending notifications",
-    ]
-
-    # Generate the dataframe with 100 rows/tickets.
+    sample_cats = [c for c in DEFAULT_CATEGORIES if "Income" not in c][:6]
     data = {
-        "ID": [f"TICKET-{i}" for i in range(1100, 1000, -1)],
-        "Issue": np.random.choice(issue_descriptions, size=100),
-        "Status": np.random.choice(["Open", "In Progress", "Closed"], size=100),
-        "Priority": np.random.choice(["High", "Medium", "Low"], size=100),
-        "Date Submitted": [
-            datetime.date(2023, 6, 1) + datetime.timedelta(days=random.randint(0, 182))
-            for _ in range(100)
+        "Date": [
+            datetime.date(2024, 1, 1) + datetime.timedelta(days=random.randint(0, 365))
+            for _ in range(50)
         ],
+        "Category": np.random.choice(sample_cats, size=50),
+        "Description": ["Sample transaction"] * 50,
+        "Amount": np.round(np.random.uniform(10, 500, 50), 2),
+        "Type": np.random.choice(["Expense", "Income"], size=50),
     }
     df = pd.DataFrame(data)
-
-    # Save the dataframe in session state (a dictionary-like object that persists across
-    # page runs). This ensures our data is persisted when the app updates.
+    # Normalize: expenses as negative for easier totals
+    df.loc[df["Type"] == "Expense", "Amount"] = -df.loc[df["Type"] == "Expense", "Amount"].abs()
     st.session_state.df = df
 
+if "categories" not in st.session_state:
+    st.session_state.categories = list(DEFAULT_CATEGORIES)
 
-# Show a section to add a new ticket.
-st.header("Add a ticket")
+categories = st.session_state.categories
 
-# We're adding tickets via an `st.form` and some input widgets. If widgets are used
-# in a form, the app will only rerun once the submit button is pressed.
-with st.form("add_ticket_form"):
-    issue = st.text_area("Describe the issue")
-    priority = st.selectbox("Priority", ["High", "Medium", "Low"])
-    submitted = st.form_submit_button("Submit")
+# ——— Add new category (section) ———
+st.header("➕ Manage categories")
+with st.expander("Add a new expense/income section (e.g. Electric Bills, Gym)"):
+    new_cat = st.text_input("New category name", placeholder="e.g. Electric Bills, Gym, Pet Care")
+    if st.button("Add category") and new_cat and new_cat.strip():
+        name = new_cat.strip()
+        if name not in categories:
+            categories.append(name)
+            st.session_state.categories = categories
+            st.success(f"Added category: **{name}**")
+            st.rerun()
+        else:
+            st.warning("That category already exists.")
+
+# ——— Add a transaction ———
+st.header("Add a transaction")
+
+with st.form("add_transaction_form"):
+    trans_date = st.date_input("Date", value=datetime.date.today())
+    trans_type = st.radio("Type", ["Expense", "Income"], horizontal=True)
+    trans_category = st.selectbox("Category", options=categories)
+    trans_description = st.text_input("Description", placeholder="e.g. Monthly electric bill")
+    trans_amount = st.number_input("Amount", min_value=0.0, step=0.01, format="%.2f")
+    submitted = st.form_submit_button("Add transaction")
 
 if submitted:
-    # Make a dataframe for the new ticket and append it to the dataframe in session
-    # state.
-    recent_ticket_number = int(max(st.session_state.df.ID).split("-")[1])
-    today = datetime.datetime.now().strftime("%m-%d-%Y")
+    amount = trans_amount if trans_type == "Income" else -abs(trans_amount)
     df_new = pd.DataFrame(
         [
             {
-                "ID": f"TICKET-{recent_ticket_number+1}",
-                "Issue": issue,
-                "Status": "Open",
-                "Priority": priority,
-                "Date Submitted": today,
+                "Date": trans_date,
+                "Category": trans_category,
+                "Description": trans_description or "-",
+                "Amount": amount,
+                "Type": trans_type,
             }
         ]
     )
-
-    # Show a little success message.
-    st.write("Ticket submitted! Here are the ticket details:")
-    st.dataframe(df_new, use_container_width=True, hide_index=True)
     st.session_state.df = pd.concat([df_new, st.session_state.df], axis=0)
+    st.success("Transaction added.")
+    st.rerun()
 
-# Show section to view and edit existing tickets in a table.
-st.header("Existing tickets")
-st.write(f"Number of tickets: `{len(st.session_state.df)}`")
+# ——— Transactions table ———
+st.header("Transactions")
+st.write(f"Total entries: **{len(st.session_state.df)}**")
 
 st.info(
-    "You can edit the tickets by double clicking on a cell. Note how the plots below "
-    "update automatically! You can also sort the table by clicking on the column headers.",
+    "Edit cells by double-clicking. Category must be one of your saved categories. Amount: negative = expense, positive = income.",
     icon="✍️",
 )
 
-# Show the tickets dataframe with `st.data_editor`. This lets the user edit the table
-# cells. The edited data is returned as a new dataframe.
 edited_df = st.data_editor(
     st.session_state.df,
     use_container_width=True,
     hide_index=True,
     column_config={
-        "Status": st.column_config.SelectboxColumn(
-            "Status",
-            help="Ticket status",
-            options=["Open", "In Progress", "Closed"],
+        "Date": st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
+        "Category": st.column_config.SelectboxColumn(
+            "Category",
+            options=categories,
             required=True,
         ),
-        "Priority": st.column_config.SelectboxColumn(
-            "Priority",
-            help="Priority",
-            options=["High", "Medium", "Low"],
+        "Description": st.column_config.TextColumn("Description"),
+        "Amount": st.column_config.NumberColumn("Amount", format="%.2f"),
+        "Type": st.column_config.SelectboxColumn(
+            "Type",
+            options=["Expense", "Income"],
             required=True,
         ),
     },
-    # Disable editing the ID and Date Submitted columns.
-    disabled=["ID", "Date Submitted"],
+    disabled=[],
 )
 
-# Show some metrics and charts about the ticket.
+# Persist edits back to session state
+st.session_state.df = edited_df
+
+# ——— Statistics ———
 st.header("Statistics")
 
-# Show metrics side by side using `st.columns` and `st.metric`.
+df = st.session_state.df
+total_income = df[df["Type"] == "Income"]["Amount"].sum()
+total_expense = abs(df[df["Type"] == "Expense"]["Amount"].sum())
+balance = total_income - total_expense
+
 col1, col2, col3 = st.columns(3)
-num_open_tickets = len(st.session_state.df[st.session_state.df.Status == "Open"])
-col1.metric(label="Number of open tickets", value=num_open_tickets, delta=10)
-col2.metric(label="First response time (hours)", value=5.2, delta=-1.5)
-col3.metric(label="Average resolution time (hours)", value=16, delta=2)
+col1.metric("Total Income", f"${total_income:,.2f}")
+col2.metric("Total Expenses", f"${total_expense:,.2f}")
+col3.metric("Balance", f"${balance:,.2f}", delta=f"${balance:,.2f}" if balance != 0 else None)
 
-# Show two Altair charts using `st.altair_chart`.
+# Spending by category (expenses only)
 st.write("")
-st.write("##### Ticket status per month")
-status_plot = (
-    alt.Chart(edited_df)
-    .mark_bar()
-    .encode(
-        x="month(Date Submitted):O",
-        y="count():Q",
-        xOffset="Status:N",
-        color="Status:N",
+st.write("##### Spending by category")
+expenses = df[df["Type"] == "Expense"].copy()
+expenses["Amount"] = expenses["Amount"].abs()
+if not expenses.empty:
+    by_cat = expenses.groupby("Category", as_index=False)["Amount"].sum()
+    cat_plot = (
+        alt.Chart(by_cat)
+        .mark_bar()
+        .encode(x=alt.X("Category:N", sort="-y"), y=alt.Y("Amount:Q", title="Amount ($)"))
+        .properties(height=320)
     )
-    .configure_legend(
-        orient="bottom", titleFontSize=14, labelFontSize=14, titlePadding=5
-    )
-)
-st.altair_chart(status_plot, use_container_width=True, theme="streamlit")
+    st.altair_chart(cat_plot, use_container_width=True, theme="streamlit")
+else:
+    st.caption("No expenses to show yet.")
 
-st.write("##### Current ticket priorities")
-priority_plot = (
-    alt.Chart(edited_df)
-    .mark_arc()
-    .encode(theta="count():Q", color="Priority:N")
-    .properties(height=300)
-    .configure_legend(
-        orient="bottom", titleFontSize=14, labelFontSize=14, titlePadding=5
-    )
+# Income vs Expense pie
+st.write("##### Income vs Expense")
+totals = pd.DataFrame(
+    {"Type": ["Income", "Expense"], "Amount": [total_income, total_expense]}
 )
-st.altair_chart(priority_plot, use_container_width=True, theme="streamlit")
+if totals["Amount"].sum() > 0:
+    pie = (
+        alt.Chart(totals)
+        .mark_arc()
+        .encode(theta="Amount:Q", color="Type:N")
+        .properties(height=300)
+        .configure_legend(orient="bottom", titleFontSize=14, labelFontSize=14, titlePadding=5)
+    )
+    st.altair_chart(pie, use_container_width=True, theme="streamlit")
+else:
+    st.caption("Add some transactions to see the chart.")
