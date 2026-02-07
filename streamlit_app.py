@@ -63,6 +63,76 @@ with st.expander("Add a new expense or income category (e.g. Electric Bills, Gym
         else:
             st.warning("That category already exists.")
 
+# ——— Import / Export CSV ———
+st.header("📁 Import / Export CSV")
+
+def _normalize_csv(df_loaded):
+    """Map CSV columns to app format and normalize Type + Amount."""
+    col_map = {c.strip().lower(): c for c in df_loaded.columns}
+    required = {"date": "Date", "category": "Category", "description": "Description", "amount": "Amount", "type": "Type"}
+    rename = {}
+    for std_lower, std_name in required.items():
+        if std_lower in col_map:
+            rename[col_map[std_lower]] = std_name
+    if len(rename) < 5:
+        return None, "CSV must have columns: Date, Category, Description, Amount, Type (names are case-insensitive)."
+    out = df_loaded.rename(columns=rename)[list(required.values())].copy()
+    # Parse dates
+    out["Date"] = pd.to_datetime(out["Date"]).dt.date
+    out["Category"] = out["Category"].astype(str).str.strip()
+    out["Description"] = out["Description"].astype(str).fillna("")
+    out["Amount"] = pd.to_numeric(out["Amount"], errors="coerce").fillna(0)
+    # Normalize Type and Amount
+    type_upper = out["Type"].astype(str).str.strip().str.lower()
+    out["Type"] = type_upper.map(lambda t: "Income" if t.startswith("i") or t == "income" else "Expense")
+    for i in out.index:
+        if out.loc[i, "Type"] == "Expense" and out.loc[i, "Amount"] > 0:
+            out.loc[i, "Amount"] = -out.loc[i, "Amount"]
+        elif out.loc[i, "Type"] == "Income" and out.loc[i, "Amount"] < 0:
+            out.loc[i, "Amount"] = abs(out.loc[i, "Amount"])
+    return out, None
+
+with st.expander("Export current transactions to CSV"):
+    if len(st.session_state.df) > 0:
+        csv_bytes = st.session_state.df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "Download as CSV",
+            data=csv_bytes,
+            file_name="finance_transactions.csv",
+            mime="text/csv",
+            key="export_csv",
+        )
+    else:
+        st.caption("Add some transactions first to export.")
+
+with st.expander("Import transactions from a CSV file"):
+    st.caption("CSV must have columns: **Date**, **Category**, **Description**, **Amount**, **Type**. Type should be 'Income' or 'Expense'. Amount can be positive; it will be converted to match Type.")
+    uploaded = st.file_uploader("Choose a CSV file", type=["csv"], key="import_csv")
+    if uploaded is not None:
+        try:
+            raw = pd.read_csv(uploaded)
+            df_import, err = _normalize_csv(raw)
+            if err:
+                st.error(err)
+            else:
+                mode = st.radio("Import mode", ["Replace all", "Append to current"], horizontal=True, key="import_mode")
+                if st.button("Load CSV", key="load_csv_btn"):
+                    if mode == "Replace all":
+                        st.session_state.df = df_import.reset_index(drop=True)
+                    else:
+                        st.session_state.df = pd.concat([st.session_state.df, df_import], axis=0, ignore_index=True)
+                    # Add any new categories from CSV to expense/income lists
+                    for _, row in df_import.iterrows():
+                        cat, typ = row["Category"], row["Type"]
+                        if typ == "Expense" and cat not in st.session_state.expense_categories:
+                            st.session_state.expense_categories.append(cat)
+                        elif typ == "Income" and cat not in st.session_state.income_categories:
+                            st.session_state.income_categories.append(cat)
+                    st.success(f"Loaded {len(df_import)} transaction(s).")
+                    st.rerun()
+        except Exception as e:
+            st.error(f"Could not read CSV: {e}")
+
 # ——— Add a transaction ———
 st.header("Add a transaction")
 
