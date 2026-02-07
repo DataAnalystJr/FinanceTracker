@@ -136,7 +136,7 @@ if len(df) > 0:
     def format_transaction(i):
         row = df.iloc[i]
         desc = str(row["Description"])[:40] if pd.notna(row["Description"]) else ""
-        return f"{row['Date']} | {row['Category']} | {desc} | ${row['Amount']:,.2f}"
+        return f"{row['Date']} | {row['Category']} | {desc} | ₱{row['Amount']:,.2f}"
 
     delete_index = st.selectbox(
         "Select transaction to delete",
@@ -160,9 +160,9 @@ total_expense = abs(df[df["Type"] == "Expense"]["Amount"].sum())
 balance = total_income - total_expense
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Total Income", f"${total_income:,.2f}")
-col2.metric("Total Expenses", f"${total_expense:,.2f}")
-col3.metric("Balance", f"${balance:,.2f}", delta=f"${balance:,.2f}" if balance != 0 else None)
+col1.metric("Total Income", f"₱{total_income:,.2f}")
+col2.metric("Total Expenses", f"₱{total_expense:,.2f}")
+col3.metric("Balance", f"₱{balance:,.2f}", delta=f"₱{balance:,.2f}" if balance != 0 else None)
 
 # Spending by category (expenses only)
 st.write("")
@@ -174,7 +174,7 @@ if not expenses.empty:
     cat_plot = (
         alt.Chart(by_cat)
         .mark_bar()
-        .encode(x=alt.X("Category:N", sort="-y"), y=alt.Y("Amount:Q", title="Amount ($)"))
+        .encode(x=alt.X("Category:N", sort="-y"), y=alt.Y("Amount:Q", title="Amount (₱)"))
         .properties(height=320)
     )
     st.altair_chart(cat_plot, use_container_width=True, theme="streamlit")
@@ -197,3 +197,4 @@ if totals["Amount"].sum() > 0:
     st.altair_chart(pie, use_container_width=True, theme="streamlit")
 else:
     st.caption("Add some transactions to see the chart.")
+
