@@ -93,7 +93,7 @@ if submitted:
             }
         ]
     )
-    st.session_state.df = pd.concat([df_new, st.session_state.df], axis=0)
+    st.session_state.df = pd.concat([df_new, st.session_state.df], axis=0, ignore_index=True)
     st.success("Transaction added.")
     st.rerun()
 
@@ -131,7 +131,8 @@ st.session_state.df = edited_df
 
 # ——— Delete a transaction (button, not checkbox) ———
 st.subheader("Delete a transaction")
-df = st.session_state.df
+# Use reset_index so we always have 0,1,2,... (avoids dropping all rows when index had duplicates)
+df = st.session_state.df.reset_index(drop=True)
 if len(df) > 0:
     def format_transaction(i):
         row = df.iloc[i]
@@ -145,6 +146,7 @@ if len(df) > 0:
         key="delete_select",
     )
     if st.button("Delete", type="primary"):
+        # Drop by position (iloc) so only one row is removed
         st.session_state.df = df.drop(df.index[delete_index]).reset_index(drop=True)
         st.success("Transaction deleted.")
         st.rerun()
