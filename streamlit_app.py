@@ -1,8 +1,6 @@
 import datetime
-import random
 
 import altair as alt
-import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -29,24 +27,11 @@ st.write(
     "Track your income and expenses by category. Add new categories (e.g. Electric Bills, Rent) and log transactions below."
 )
 
-# Initialize session state: transactions dataframe and custom categories
+# Initialize session state: empty transactions and custom categories
 if "df" not in st.session_state:
-    np.random.seed(42)
-    sample_cats = [c for c in DEFAULT_CATEGORIES if "Income" not in c][:6]
-    data = {
-        "Date": [
-            datetime.date(2024, 1, 1) + datetime.timedelta(days=random.randint(0, 365))
-            for _ in range(50)
-        ],
-        "Category": np.random.choice(sample_cats, size=50),
-        "Description": ["Sample transaction"] * 50,
-        "Amount": np.round(np.random.uniform(10, 500, 50), 2),
-        "Type": np.random.choice(["Expense", "Income"], size=50),
-    }
-    df = pd.DataFrame(data)
-    # Normalize: expenses as negative for easier totals
-    df.loc[df["Type"] == "Expense", "Amount"] = -df.loc[df["Type"] == "Expense", "Amount"].abs()
-    st.session_state.df = df
+    st.session_state.df = pd.DataFrame(
+        columns=["Date", "Category", "Description", "Amount", "Type"]
+    )
 
 if "categories" not in st.session_state:
     st.session_state.categories = list(DEFAULT_CATEGORIES)
