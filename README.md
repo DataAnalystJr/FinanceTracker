@@ -1,19 +1,19 @@
-# 🎫 Support tickets template
+# 💰 Personal Finance Tracker
 
-A simple Streamlit app showing an internal tool that lets you create, manage, and visualize support tickets. 
+Track income and expenses by category. Add custom categories (e.g. Electric Bills, Rent) and view stats and charts.
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://support-tickets-template.streamlit.app/)
+### How to run it
 
-### How to run it on your own machine
-
-1. Install the requirements
+1. Install the requirements (if needed):
 
    ```
-   $ pip install -r requirements.txt
+   python -m pip install -r requirements.txt
    ```
 
-2. Run the app
+2. Run the app:
 
    ```
-   $ streamlit run streamlit_app.py
+   python -m streamlit run streamlit_app.py
    ```
+
+Use `python -m streamlit` if the `streamlit` command is not found in your terminal.

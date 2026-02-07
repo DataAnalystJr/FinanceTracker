@@ -4,8 +4,8 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-# Default expense/income categories — user can add more
-DEFAULT_CATEGORIES = [
+# Default categories — expense and income separate so the form shows the right list
+DEFAULT_EXPENSE_CATEGORIES = [
     "Electric Bills",
     "Groceries",
     "Rent / Mortgage",
@@ -16,6 +16,8 @@ DEFAULT_CATEGORIES = [
     "Healthcare",
     "Shopping",
     "Utilities",
+]
+DEFAULT_INCOME_CATEGORIES = [
     "Income (Salary)",
     "Income (Other)",
 ]
@@ -33,21 +35,30 @@ if "df" not in st.session_state:
         columns=["Date", "Category", "Description", "Amount", "Type"]
     )
 
-if "categories" not in st.session_state:
-    st.session_state.categories = list(DEFAULT_CATEGORIES)
+if "expense_categories" not in st.session_state:
+    st.session_state.expense_categories = list(DEFAULT_EXPENSE_CATEGORIES)
+if "income_categories" not in st.session_state:
+    st.session_state.income_categories = list(DEFAULT_INCOME_CATEGORIES)
 
-categories = st.session_state.categories
+expense_categories = st.session_state.expense_categories
+income_categories = st.session_state.income_categories
+all_categories = expense_categories + income_categories
 
 # ——— Add new category (section) ———
 st.header("➕ Manage categories")
-with st.expander("Add a new expense/income section (e.g. Electric Bills, Gym)"):
+with st.expander("Add a new expense or income category (e.g. Electric Bills, Gym)"):
+    cat_type = st.radio("Category for", ["Expense", "Income"], horizontal=True)
     new_cat = st.text_input("New category name", placeholder="e.g. Electric Bills, Gym, Pet Care")
     if st.button("Add category") and new_cat and new_cat.strip():
         name = new_cat.strip()
-        if name not in categories:
-            categories.append(name)
-            st.session_state.categories = categories
-            st.success(f"Added category: **{name}**")
+        target = st.session_state.expense_categories if cat_type == "Expense" else st.session_state.income_categories
+        if name not in target:
+            target.append(name)
+            if cat_type == "Expense":
+                st.session_state.expense_categories = target
+            else:
+                st.session_state.income_categories = target
+            st.success(f"Added **{name}** to {cat_type} categories.")
             st.rerun()
         else:
             st.warning("That category already exists.")
@@ -58,7 +69,11 @@ st.header("Add a transaction")
 with st.form("add_transaction_form"):
     trans_date = st.date_input("Date", value=datetime.date.today())
     trans_type = st.radio("Type", ["Expense", "Income"], horizontal=True)
-    trans_category = st.selectbox("Category", options=categories)
+    # Show only expense or income categories depending on type
+    trans_category = st.selectbox(
+        "Category",
+        options=expense_categories if trans_type == "Expense" else income_categories,
+    )
     trans_description = st.text_input("Description", placeholder="e.g. Monthly electric bill")
     trans_amount = st.number_input("Amount", min_value=0.0, step=0.01, format="%.2f")
     submitted = st.form_submit_button("Add transaction")
@@ -97,7 +112,7 @@ edited_df = st.data_editor(
         "Date": st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
         "Category": st.column_config.SelectboxColumn(
             "Category",
-            options=categories,
+            options=all_categories,
             required=True,
         ),
         "Description": st.column_config.TextColumn("Description"),
