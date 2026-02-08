@@ -25,97 +25,6 @@ DEFAULT_INCOME_CATEGORIES = [
 # Page config: wide layout so 2 columns use full width; initial_sidebar_state optional
 st.set_page_config(page_title="Personal Finance Tracker", page_icon="💰", layout="wide", initial_sidebar_state="collapsed")
 
-# Colour palette: slate #576A8F, lavender #B7BDF7, cream #FFF8DE, coral #FF7444
-PALETTE = {
-    "slate": "#576A8F",
-    "lavender": "#B7BDF7",
-    "cream": "#FFF8DE",
-    "coral": "#FF7444",
-}
-
-# Theme + compact layout so UI fills screen
-st.markdown(f"""
-<style>
-    /* Base & layout */
-    .stApp {{ background: linear-gradient(180deg, {PALETTE['cream']} 0%, #f5f0e0 100%); }}
-    .block-container {{ padding-top: 1rem; padding-bottom: 1rem; max-width: 100%; background: transparent; }}
-    section.main > div {{ padding-top: 0.5rem; }}
-    [data-testid="stVerticalBlock"] > div:not([data-testid]) {{ gap: 0.25rem; }}
-
-    /* Headers – slate */
-    h1, h2, h3 {{ color: {PALETTE['slate']} !important; font-weight: 600; }}
-    .stMarkdown h1 {{ border-bottom: 2px solid {PALETTE['lavender']}; padding-bottom: 0.25rem; }}
-
-    /* Primary button – coral */
-    .stButton > button[kind="primary"] {{
-        background: {PALETTE['coral']} !important;
-        color: white !important;
-        border: none;
-        font-weight: 600;
-    }}
-    .stButton > button[kind="primary"]:hover {{
-        background: #e66a3d !important;
-        color: white !important;
-        border: none;
-    }}
-
-    /* Secondary buttons – lavender tint */
-    .stButton > button:not([kind="primary"]) {{
-        background: {PALETTE['lavender']} !important;
-        color: {PALETTE['slate']} !important;
-        border: 1px solid {PALETTE['slate']};
-    }}
-    .stButton > button:not([kind="primary"]):hover {{
-        background: #a8aef0 !important;
-        color: {PALETTE['slate']} !important;
-    }}
-
-    /* Metrics / stat cards – cream card with slate text */
-    [data-testid="stMetric"] {{
-        background: rgba(255, 248, 222, 0.9);
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        border-left: 4px solid {PALETTE['coral']};
-        box-shadow: 0 1px 3px rgba(87, 106, 143, 0.15);
-    }}
-    [data-testid="stMetricLabel"] {{ color: {PALETTE['slate']} !important; }}
-    [data-testid="stMetricValue"] {{ color: {PALETTE['slate']} !important; font-weight: 700; }}
-
-    /* Expanders – lavender header, cream body */
-    .streamlit-expanderHeader {{
-        background: {PALETTE['lavender']} !important;
-        color: {PALETTE['slate']} !important;
-        border-radius: 6px;
-        font-weight: 600;
-    }}
-    [data-testid="stExpander"] {{
-        border: 1px solid {PALETTE['lavender']};
-        border-radius: 8px;
-        background: rgba(255, 248, 222, 0.5);
-    }}
-
-    /* Info / success / warning boxes */
-    [data-testid="stAlert"] {{
-        border-radius: 8px;
-        border-left: 4px solid {PALETTE['slate']};
-        background: rgba(255, 248, 222, 0.95);
-    }}
-
-    /* Radio & select – slate accent */
-    .stRadio > div {{ background: rgba(183, 189, 247, 0.3); border-radius: 6px; padding: 0.25rem; }}
-    [data-testid="stSelectbox"] > div {{ border-color: {PALETTE['lavender']}; }}
-
-    /* Data editor / table */
-    [data-testid="stDataFrame"] {{
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid {PALETTE['lavender']};
-        box-shadow: 0 1px 4px rgba(87, 106, 143, 0.12);
-    }}
-    .stMetric {{ padding: 0.25rem 0; }}
-</style>
-""", unsafe_allow_html=True)
-
 st.title("💰 Personal Finance Tracker")
 st.write(
     "Track your income and expenses by category. Add new categories (e.g. Electric Bills, Rent) and log transactions below."
@@ -346,7 +255,6 @@ with right_col:
             .encode(
                 x=alt.X("Category:N", sort="-y"),
                 y=alt.Y("Amount:Q", title="Amount (₱)"),
-                color=alt.value(PALETTE["slate"]),
             )
             .properties(height=280)
         )
@@ -362,10 +270,10 @@ with right_col:
     if totals["Amount"].sum() > 0:
         pie = (
             alt.Chart(totals)
-            .mark_arc(stroke="#FFF8DE", strokeWidth=2)
+            .mark_arc()
             .encode(
                 theta="Amount:Q",
-                color=alt.Color("Type:N", scale=alt.Scale(domain=["Income", "Expense"], range=[PALETTE["coral"], PALETTE["slate"]])),
+                color="Type:N",
             )
             .properties(height=260)
             .configure_legend(orient="bottom", titleFontSize=14, labelFontSize=14, titlePadding=5)
