@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 
 import altair as alt
 import pandas as pd
@@ -24,6 +25,53 @@ DEFAULT_INCOME_CATEGORIES = [
 
 # Page config: wide layout so 2 columns use full width; initial_sidebar_state optional
 st.set_page_config(page_title="Personal Finance Tracker", page_icon="💰", layout="wide", initial_sidebar_state="collapsed")
+
+# Cream background + dark text for readability
+st.markdown("""
+<style>
+    .stApp { background-color: #FFF8E7; }
+    header[data-testid="stHeader"], [data-testid="stHeader"], [data-testid="stDecoration"], .stApp header, [data-testid="stToolbar"] { background-color: #FFF8E7 !important; }
+
+    .block-container { background: transparent; }
+
+    h1, h2, h3, h4, h5, h6, p, label, span, .stMarkdown, [data-testid="stMetricLabel"], [data-testid="stMetricValue"],
+    [data-testid="stCaptionContainer"], .streamlit-expanderHeader, [data-testid="stExpander"] label {
+        color: #1a1a1a !important;
+    }
+
+    label, [data-testid="stMetricLabel"], .streamlit-expanderHeader, [data-testid="stExpander"] label {
+        font-weight: bold !important;
+    }
+
+    [data-testid="stTextInput"] input, [data-testid="stNumberInput"] input, [data-testid="stDateInput"] input {
+        color: #1a1a1a !important;
+        background-color: #fff !important;
+    }
+
+    .stButton > button {
+        background-color: #f0e6d0 !important;
+        color: #1a1a1a !important;
+        border: 1px solid #c4a77d !important;
+    }
+
+    .stButton > button:hover {
+        background-color: #e5d9b8 !important;
+        color: #1a1a1a !important;
+    }
+
+    [data-testid="stDataFrame"] th, [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] input,
+    [data-testid="stDataEditor"] th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] input {
+        background-color: #fff !important;
+        color: #1a1a1a !important;
+    }
+
+    .stDataFrame th, .stDataFrame td, .stDataFrame input, .stDataEditor th, .stDataEditor td, .stDataEditor input,
+    [data-testid="stDataFrame"] .data th, [data-testid="stDataFrame"] .data td {
+        background-color: #fff !important;
+        color: #1a1a1a !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 st.title("💰 Personal Finance Tracker")
 st.write(
@@ -99,16 +147,40 @@ with left_col:
 
     with st.expander("Export current transactions to CSV"):
         if len(st.session_state.df) > 0:
+            export_name = st.text_input(
+                "Export filename",
+                value="finance_transactions.csv",
+                placeholder="e.g. my_transactions.csv",
+                key="export_filename",
+            )
+            # Ensure filename ends with .csv
+            if export_name and not export_name.lower().endswith(".csv"):
+                export_name = export_name.strip() + ".csv"
+            elif not export_name or not export_name.strip():
+                export_name = "finance_transactions.csv"
+            else:
+                export_name = export_name.strip()
             csv_bytes = st.session_state.df.to_csv(index=False).encode("utf-8")
             st.download_button(
                 "Download as CSV",
                 data=csv_bytes,
-                file_name="finance_transactions.csv",
+                file_name=export_name,
                 mime="text/csv",
                 key="export_csv",
             )
+            st.caption("Save to project folder (overwrites existing file with same name):")
+            if st.button("Save to project folder", key="save_to_folder"):
+                try:
+                    # Use only the base filename to prevent path traversal
+                    safe_name = Path(export_name).name
+                    project_dir = Path(__file__).resolve().parent
+                    out_path = project_dir / safe_name
+                    st.session_state.df.to_csv(out_path, index=False)
+                    st.success(f"Saved to `{out_path}` (replaced existing file if present).")
+                except Exception as e:
+                    st.error(f"Could not save file: {e}")
         else:
-            st.caption("Add some transactions first to export.")
+            st.warning("Cannot download: there are no transactions. Add at least one transaction to export.")
 
     with st.expander("Import transactions from a CSV file"):
         st.caption("CSV must have columns: **Date**, **Category**, **Description**, **Amount**, **Type**. Type should be 'Income' or 'Expense'. Amount can be positive; it will be converted to match Type.")
