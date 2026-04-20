@@ -29,8 +29,66 @@ st.set_page_config(page_title="Personal Finance Tracker", page_icon="💰", layo
 # Cream background + dark text for readability
 st.markdown("""
 <style>
-    .stApp { background-color: #FFF8E7; }
+    .stApp {
+        background-color: #FFF8E7;
+        position: relative;
+    }
     header[data-testid="stHeader"], [data-testid="stHeader"], [data-testid="stDecoration"], .stApp header, [data-testid="stToolbar"] { background-color: #FFF8E7 !important; }
+
+    /* Dedicated animated background layer (more reliable than pseudo-elements on Streamlit wrappers). */
+    .animated-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        overflow: hidden;
+        background: linear-gradient(130deg, #fff8e7 0%, #fff5df 50%, #fff9ef 100%);
+    }
+    .animated-bg .blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(48px);
+        opacity: 0.48;
+        will-change: transform;
+    }
+    .animated-bg .blob-1 {
+        width: 38vw;
+        height: 38vw;
+        min-width: 250px;
+        min-height: 250px;
+        left: -8vw;
+        top: -10vh;
+        background: rgba(240, 224, 187, 0.92);
+        animation: floatBlobOne 14s ease-in-out infinite alternate;
+    }
+    .animated-bg .blob-2 {
+        width: 34vw;
+        height: 34vw;
+        min-width: 220px;
+        min-height: 220px;
+        right: -10vw;
+        bottom: -12vh;
+        background: rgba(196, 167, 125, 0.56);
+        animation: floatBlobTwo 16s ease-in-out infinite alternate;
+    }
+    @keyframes floatBlobOne {
+        0% { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(6vw, 4vh) scale(1.12); }
+    }
+    @keyframes floatBlobTwo {
+        0% { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(-5vw, -3vh) scale(1.1); }
+    }
+    .stApp > * {
+        position: relative;
+        z-index: 1;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .animated-bg .blob-1,
+        .animated-bg .blob-2 {
+            animation: none;
+        }
+    }
 
     .block-container { background: transparent; }
 
@@ -38,25 +96,53 @@ st.markdown("""
     [data-testid="stCaptionContainer"], .streamlit-expanderHeader, [data-testid="stExpander"] label {
         color: #1a1a1a !important;
     }
+    
+    h1 {
+        text-shadow: 0 3px 10px rgba(0, 0, 0, 0.18) !important;
+    }
+
+    h2 {
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.14) !important;
+    }
 
     label, [data-testid="stMetricLabel"], .streamlit-expanderHeader, [data-testid="stExpander"] label {
         font-weight: bold !important;
     }
 
-    [data-testid="stTextInput"] input, [data-testid="stNumberInput"] input, [data-testid="stDateInput"] input {
+    [data-testid="stTextInput"] input, [data-testid="stNumberInput"] input, [data-testid="stDateInput"] input,
+    [data-testid="stSelectbox"] > div > div,
+    [data-testid="stMultiSelect"] > div > div {
         color: #1a1a1a !important;
         background-color: #fff !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+        border: 1px solid #eadfc9 !important;
     }
 
     .stButton > button {
         background-color: #f0e6d0 !important;
         color: #1a1a1a !important;
         border: 1px solid #c4a77d !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16) !important;
+    }
+
+    [data-testid="stFormSubmitButton"] > button {
+        background-color: #f0e6d0 !important;
+        color: #1a1a1a !important;
+        border: 1px solid #c4a77d !important;
+        box-shadow: 0 5px 12px rgba(0, 0, 0, 0.18) !important;
     }
 
     .stButton > button:hover {
         background-color: #e5d9b8 !important;
         color: #1a1a1a !important;
+    }
+
+    /* Add depth to non-input containers like expanders/sections */
+    [data-testid="stExpander"] {
+        background-color: #fffef9 !important;
+        border: 1px solid #eadfc9 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.10) !important;
     }
 
     [data-testid="stDataFrame"] th, [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] input,
@@ -72,6 +158,16 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+st.markdown(
+    """
+    <div class="animated-bg" aria-hidden="true">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.title("💰 Personal Finance Tracker")
 st.write(
@@ -255,7 +351,7 @@ with left_col:
 
     edited_df = st.data_editor(
         st.session_state.df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "Date": st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
@@ -330,7 +426,7 @@ with right_col:
             )
             .properties(height=280)
         )
-        st.altair_chart(cat_plot, use_container_width=True, theme="streamlit")
+        st.altair_chart(cat_plot, width="stretch", theme="streamlit")
     else:
         st.caption("No expenses to show yet.")
 
@@ -350,7 +446,7 @@ with right_col:
             .properties(height=260)
             .configure_legend(orient="bottom", titleFontSize=14, labelFontSize=14, titlePadding=5)
         )
-        st.altair_chart(pie, use_container_width=True, theme="streamlit")
+        st.altair_chart(pie, width="stretch", theme="streamlit")
     else:
         st.caption("Add some transactions to see the chart.")
 
