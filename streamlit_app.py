@@ -29,6 +29,20 @@ st.set_page_config(page_title="Personal Finance Tracker", page_icon="💰", layo
 # Cream background + dark text for readability
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap');
+
+    html, body, .stApp, .stMarkdown, p, label, input, textarea, select, button {
+        font-family: "Instrument Sans", sans-serif !important;
+    }
+    .material-symbols-rounded,
+    .material-icons,
+    [class*="material-symbols"],
+    [data-testid="stExpanderToggleIcon"] span {
+        font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
+        font-style: normal;
+        font-weight: 400;
+    }
+
     .stApp {
         background-color: #FFF8E7;
         position: relative;
