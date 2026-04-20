@@ -324,21 +324,27 @@ with left_col:
         submitted = st.form_submit_button("Add transaction")
 
     if submitted:
-        amount = trans_amount if trans_type == "Income" else -abs(trans_amount)
-        df_new = pd.DataFrame(
-            [
-                {
-                    "Date": trans_date,
-                    "Category": trans_category,
-                    "Description": trans_description or "-",
-                    "Amount": amount,
-                    "Type": trans_type,
-                }
-            ]
-        )
-        st.session_state.df = pd.concat([df_new, st.session_state.df], axis=0, ignore_index=True)
-        st.success("Transaction added.")
-        st.rerun()
+        if trans_amount <= 0:
+            st.warning("Amount must be greater than 0.00.")
+        elif not trans_description or not trans_description.strip():
+            st.warning("Please add a description before saving the transaction.")
+        else:
+            clean_description = trans_description.strip()
+            amount = trans_amount if trans_type == "Income" else -abs(trans_amount)
+            df_new = pd.DataFrame(
+                [
+                    {
+                        "Date": trans_date,
+                        "Category": trans_category,
+                        "Description": clean_description,
+                        "Amount": amount,
+                        "Type": trans_type,
+                    }
+                ]
+            )
+            st.session_state.df = pd.concat([df_new, st.session_state.df], axis=0, ignore_index=True)
+            st.success("Transaction added.")
+            st.rerun()
 
     # ——— Transactions table ———
     st.header("Transactions")
